@@ -1,0 +1,130 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. Clientes
+model Client {
+  id           String              @id @default(uuid())
+  name         String
+  email        String?
+  phone        String?
+  address      String?
+  taxId        String?             // CUIT/CUIL o similar
+  active       Boolean             @default(true)
+  balancePesos Decimal             @default(0.0) // Balance acumulado en Pesos (deuda del cliente, positivo = nos debe)
+  balanceUsd   Decimal             @default(0.0) // Balance acumulado en Dólares (deuda del cliente, positivo = nos debe)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  
+  transactions ClientTransaction[]
+  sales        Sale[]
+}
+
+// 2. Transacciones de Cuenta Corriente (Libro Diario de Clientes)
+model ClientTransaction {
+  id             String          @id @default(uuid())
+  clientId       String
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type           TransactionType // SALE (Venta a crédito), PAYMENT (Pago recibido/cobro), ADJUSTMENT (Ajuste manual)
+  currency       String          @default("PESOS") // PESOS, USD
+  amount         Decimal         // Importe de la transacción (positivo aumenta saldo, negativo lo disminuye)
+  balanceAfter   Decimal         // Saldo histórico resultante en esa moneda
+  description    String          // Detalle (ej: "Pago en efectivo - Recibo #0023", "Venta #1004")
+  date           DateTime        @default(now())
+  referenceId    String?         // ID de la Venta o Recibo relacionado
+  createdAt      DateTime        @default(now())
+}
+
+enum TransactionType {
+  SALE
+  PAYMENT
+  ADJUSTMENT
+}
+
+// 3. Productos y Precios
+model Product {
+  id            String         @id @default(uuid())
+  code          String         @unique // Código de barras o SKU
+  name          String
+  brand         String?        // Marca (ej: Arcor, Sweet Rial)
+  weight        String?        // Peso / Contenido Neto (ej: 5kg, 900g)
+  description   String?
+  cost          Decimal        @default(0.0) // Costo de compra actual
+  price         Decimal        @default(0.0) // Precio de venta de lista
+  cashPrice     Decimal        @default(0.0) // Precio de venta en efectivo
+  stock         Int            @default(0)
+  category      String         @default("General")
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
+}
+
+// 4. Ventas (Facturas/Recibos)
+model Sale {
+  id            String      @id @default(uuid())
+  invoiceNumber String?     @unique
+  date          DateTime    @default(now())
+  clientId      String?
+  client        Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  totalAmount   Decimal
+  currency      String      @default("PESOS") // PESOS, USD
+  paymentMethod String      // CASH (Efectivo), CARD (Tarjeta), TRANSFER (Transferencia), CUENTA_CORRIENTE
+  notes         String?
+  createdAt     DateTime    @default(now())
+  
+  items         SaleItem[]
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int
+  price     Decimal  // Precio cobrado (histórico)
+  cost      Decimal  // Costo al momento de la venta (para cálculo de ganancia real)
+}
+
+// 5. Compras (Ingreso de Stock/Proveedores)
+model Purchase {
+  id           String         @id @default(uuid())
+  date         DateTime       @default(now())
+  supplierName String         @default("Proveedor General")
+  totalAmount  Decimal
+  currency     String         @default("PESOS") // PESOS, USD
+  notes        String?
+  createdAt    DateTime       @default(now())
+  
+  items        PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         String   @id @default(uuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity   Int
+  costPrice  Decimal  // Costo de compra cobrado por el proveedor
+}
+
+// 6. Gastos Detallados
+model Expense {
+  id            String   @id @default(uuid())
+  date          DateTime @default(now())
+  category      String   // Alquiler, Servicios, Sueldos, Impuestos, Proveedores, Varios
+  amount        Decimal
+  currency      String   @default("PESOS") // PESOS, USD
+  description   String
+  paymentMethod String   // CASH, CARD, TRANSFER
+  createdAt     DateTime @default(now())
+}
