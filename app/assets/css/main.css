@@ -1,0 +1,277 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Color Palette */
+  --floral-white: #F7F3E8;
+  --vanilla-custard: #E9D79B;
+  --soft-fawn: #D0B46F;
+  --amber-honey: #E8AE1F;
+  --white: #FEFDFE;
+  --sage-green: #699361;
+  
+  /* System Colors */
+  --bg-app: var(--floral-white);
+  --bg-card: var(--white);
+  --text-primary: #1E1C18;
+  --text-secondary: #5A564C;
+  --text-muted: #8E897D;
+  --border-color: rgba(208, 180, 111, 0.25); /* Transparent --soft-fawn */
+  --border-focus: var(--amber-honey);
+  
+  /* Success & Danger */
+  --color-success: var(--sage-green);
+  --color-danger: #D9534F;
+  --color-info: #537FE7;
+  
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 76px;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(30, 28, 24, 0.02);
+  --shadow-md: 0 8px 30px rgba(208, 180, 111, 0.12);
+  --shadow-lg: 0 12px 40px rgba(30, 28, 24, 0.08);
+  --shadow-honey: 0 8px 24px rgba(232, 174, 31, 0.25);
+  --shadow-green: 0 8px 24px rgba(105, 147, 97, 0.25);
+  
+  /* Fonts */
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-title: 'Outfit', sans-serif;
+}
+
+/* Base Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family-sans);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-title);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--floral-white);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--soft-fawn);
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--amber-honey);
+}
+
+/* Premium Layout & Common Components */
+.premium-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.premium-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(232, 174, 31, 0.4);
+}
+
+/* Input Fields */
+.premium-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--soft-fawn);
+  background-color: var(--white);
+  color: var(--text-primary);
+  font-family: var(--font-family-sans);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.premium-input:focus {
+  border-color: var(--amber-honey);
+  box-shadow: 0 0 0 3px rgba(232, 174, 31, 0.15);
+}
+
+.premium-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-family: var(--font-family-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--amber-honey);
+  color: #1E1C18;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background-color: #d19914;
+  box-shadow: var(--shadow-honey);
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background-color: var(--sage-green);
+  color: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-success:hover {
+  background-color: #55784d;
+  box-shadow: var(--shadow-green);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--white);
+  color: var(--text-primary);
+  border: 1px solid var(--soft-fawn);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover {
+  background-color: var(--floral-white);
+  border-color: var(--amber-honey);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-danger:hover {
+  background-color: #b83d39;
+  transform: translateY(-1px);
+}
+
+/* Table Design */
+.premium-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  background-color: var(--white);
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.premium-table th {
+  background-color: var(--floral-white);
+  color: var(--text-secondary);
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  padding: 16px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.premium-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.premium-table tr:last-child td {
+  border-bottom: none;
+}
+
+.premium-table tr:hover td {
+  background-color: rgba(233, 215, 155, 0.15); /* very light --vanilla-custard */
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-success {
+  background-color: rgba(105, 147, 97, 0.15);
+  color: var(--sage-green);
+}
+
+.badge-danger {
+  background-color: rgba(217, 83, 79, 0.15);
+  color: var(--color-danger);
+}
+
+.badge-warning {
+  background-color: rgba(232, 174, 31, 0.15);
+  color: #c9930f;
+}
+
+.badge-info {
+  background-color: rgba(83, 127, 231, 0.15);
+  color: var(--color-info);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glassmorphism Backgrounds */
+.glass {
+  background: rgba(254, 253, 254, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(208, 180, 111, 0.25);
+}
