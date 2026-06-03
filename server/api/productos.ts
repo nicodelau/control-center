@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody } from 'h3'
+import { defineEventHandler, readBody, getQuery } from 'h3'
 import { db } from '../utils/dbFallback'
 import { prisma } from '../utils/prisma'
 
@@ -87,4 +87,14 @@ export default defineEventHandler(async (event) => {
     const { id, ...data } = body
     return await db.updateProduct(id, data)
   }
+
+  if (method === 'DELETE') {
+    const query = getQuery(event)
+    const id = query.id as string
+    if (!id) {
+      throw new Error("ID de producto requerido para eliminación")
+    }
+    return await db.deleteProduct(id)
+  }
 })
+

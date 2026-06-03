@@ -361,7 +361,11 @@ export const db = {
   async createClient(data: any) {
     if (await this.isPrismaConnected()) {
       try {
-        return await prisma.client.create({ data })
+        const prismaData = { ...data }
+        if (!prismaData.id) {
+          delete prismaData.id
+        }
+        return await prisma.client.create({ data: prismaData })
       } catch (err) {
         console.error("Prisma error, falling back:", err)
       }
@@ -492,7 +496,11 @@ export const db = {
   async createProduct(data: any) {
     if (await this.isPrismaConnected()) {
       try {
-        return await prisma.product.create({ data })
+        const prismaData = { ...data }
+        if (!prismaData.id) {
+          delete prismaData.id
+        }
+        return await prisma.product.create({ data: prismaData })
       } catch (err) {
         console.error("Prisma error, falling back:", err)
       }
@@ -789,7 +797,11 @@ export const db = {
   async createExpense(data: any) {
     if (await this.isPrismaConnected()) {
       try {
-        return await prisma.expense.create({ data })
+        const prismaData = { ...data }
+        if (!prismaData.id) {
+          delete prismaData.id
+        }
+        return await prisma.expense.create({ data: prismaData })
       } catch (err) {
         console.error("Prisma error, falling back:", err)
       }
@@ -819,6 +831,48 @@ export const db = {
     if (index !== -1) {
       const deleted = mockDb.expenses[index]
       mockDb.expenses.splice(index, 1)
+      return deleted
+    }
+    return null
+  },
+
+  async deleteProduct(id: string) {
+    if (await this.isPrismaConnected()) {
+      try {
+        return await prisma.product.delete({ where: { id } })
+      } catch (err: any) {
+        console.error("Prisma error deleting product:", err)
+        if (err.code === 'P2003') {
+          throw new Error("No se puede eliminar el producto porque tiene historial de ventas o compras. Puedes desactivarlo en su lugar.")
+        }
+        throw err
+      }
+    }
+    const index = mockDb.products.findIndex((p: any) => p.id === id)
+    if (index !== -1) {
+      const deleted = mockDb.products[index]
+      mockDb.products.splice(index, 1)
+      return deleted
+    }
+    return null
+  },
+
+  async deleteClient(id: string) {
+    if (await this.isPrismaConnected()) {
+      try {
+        return await prisma.client.delete({ where: { id } })
+      } catch (err: any) {
+        console.error("Prisma error deleting client:", err)
+        if (err.code === 'P2003') {
+          throw new Error("No se puede eliminar el cliente porque tiene historial de transacciones o ventas. Puedes desactivarlo en su lugar.")
+        }
+        throw err
+      }
+    }
+    const index = mockDb.clients.findIndex((c: any) => c.id === id)
+    if (index !== -1) {
+      const deleted = mockDb.clients[index]
+      mockDb.clients.splice(index, 1)
       return deleted
     }
     return null

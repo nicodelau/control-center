@@ -87,6 +87,9 @@
                 <button class="action-edit-btn" @click="openEditModal(cust)" title="Editar Perfil">
                   <EditIcon :size="16" />
                 </button>
+                <button class="action-delete-btn" @click="deleteClient(cust.id)" title="Eliminar Cliente">
+                  <TrashIcon :size="16" />
+                </button>
               </div>
             </td>
           </tr>
@@ -196,7 +199,8 @@ import {
   Search as SearchIcon, 
   Edit as EditIcon, 
   X as XIcon, 
-  BookOpen as BookOpenIcon 
+  BookOpen as BookOpenIcon,
+  Trash as TrashIcon
 } from 'lucide-vue-next'
 
 const { data: clients, refresh } = await useFetch('/api/clientes')
@@ -289,6 +293,19 @@ async function submitForm() {
     alert("Error al guardar cliente: " + err.message)
   } finally {
     submitting.value = false
+  }
+}
+
+async function deleteClient(id) {
+  if (!confirm("¿Está seguro que desea eliminar este cliente?")) return
+  
+  try {
+    await $fetch(`/api/clientes/${id}`, {
+      method: 'DELETE'
+    })
+    await refresh()
+  } catch (err) {
+    alert("Error al eliminar el cliente: " + err.message)
   }
 }
 </script>
@@ -454,6 +471,23 @@ async function submitForm() {
 .action-edit-btn:hover {
   background-color: var(--vanilla-custard);
   color: var(--text-primary);
+}
+
+.action-delete-btn {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.action-delete-btn:hover {
+  background-color: rgba(217, 83, 79, 0.15);
+  color: var(--color-danger);
 }
 
 /* Modal form overlay */

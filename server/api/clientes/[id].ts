@@ -49,4 +49,9 @@ export default defineEventHandler(async (event) => {
 
     return tx
   }
+
+  if (method === 'DELETE') {
+    return await db.deleteClient(id)
+  }
 })
+

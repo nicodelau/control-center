@@ -97,6 +97,9 @@
                 <button class="action-edit-btn" @click="openEditModal(prod)" title="Editar">
                   <EditIcon :size="16" />
                 </button>
+                <button class="action-delete-btn" @click="deleteProduct(prod.id)" title="Eliminar">
+                  <TrashIcon :size="16" />
+                </button>
               </div>
             </td>
           </tr>
@@ -270,7 +273,8 @@ import {
   Plus as PlusIcon, 
   Search as SearchIcon, 
   Edit as EditIcon, 
-  X as XIcon 
+  X as XIcon,
+  Trash as TrashIcon
 } from 'lucide-vue-next'
 
 // Fetch products from server route
@@ -397,6 +401,19 @@ async function submitForm() {
     alert("Error al guardar el producto: " + err.message)
   } finally {
     submitting.value = false
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm("¿Está seguro que desea eliminar este producto?")) return
+  
+  try {
+    await $fetch(`/api/productos?id=${id}`, {
+      method: 'DELETE'
+    })
+    await refresh()
+  } catch (err) {
+    alert("Error al eliminar el producto: " + err.message)
   }
 }
 </script>
@@ -605,6 +622,23 @@ async function submitForm() {
 .action-edit-btn:hover {
   background-color: var(--vanilla-custard);
   color: var(--text-primary);
+}
+
+.action-delete-btn {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.action-delete-btn:hover {
+  background-color: rgba(217, 83, 79, 0.15);
+  color: var(--color-danger);
 }
 
 /* Modal Form Overlay */
