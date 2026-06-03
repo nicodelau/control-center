@@ -500,6 +500,11 @@ export const db = {
         if (!prismaData.id) {
           delete prismaData.id
         }
+        if (!prismaData.category || !prismaData.category.trim()) {
+          prismaData.category = 'General'
+        } else {
+          prismaData.category = prismaData.category.trim()
+        }
         return await prisma.product.create({ data: prismaData })
       } catch (err) {
         console.error("Prisma error, falling back:", err)
@@ -528,9 +533,17 @@ export const db = {
   async updateProduct(id: string, data: any) {
     if (await this.isPrismaConnected()) {
       try {
+        const prismaData = { ...data }
+        if (prismaData.category !== undefined) {
+          if (!prismaData.category || !prismaData.category.trim()) {
+            prismaData.category = 'General'
+          } else {
+            prismaData.category = prismaData.category.trim()
+          }
+        }
         return await prisma.product.update({
           where: { id },
-          data
+          data: prismaData
         })
       } catch (err) {
         console.error("Prisma error, falling back:", err)

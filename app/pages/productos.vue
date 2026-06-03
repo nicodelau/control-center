@@ -305,7 +305,7 @@ const form = ref({
 // Categories dynamic list from products
 const categories = computed(() => {
   if (!products.value) return []
-  const cats = products.value.map(p => p.category)
+  const cats = products.value.map(p => (p.category ? p.category.trim() : 'General') || 'General')
   return [...new Set(cats)].sort()
 })
 
@@ -322,9 +322,10 @@ const filteredProducts = computed(() => {
       (p.brand && p.brand.toLowerCase().includes(query))
       
     // 2. Category filter
+    const productCategory = (p.category ? p.category.trim() : 'General') || 'General'
     const matchesCategory = 
       selectedCategory.value === 'ALL' || 
-      p.category === selectedCategory.value
+      productCategory === selectedCategory.value
 
     return matchesSearch && matchesCategory
   })

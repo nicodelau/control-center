@@ -277,7 +277,7 @@ const formattedToday = computed(() => {
 // Dynamic categories list
 const categories = computed(() => {
   if (!products.value) return []
-  const cats = products.value.map(p => p.category)
+  const cats = products.value.map(p => (p.category ? p.category.trim() : 'General') || 'General')
   return [...new Set(cats)].sort()
 })
 
@@ -290,10 +290,11 @@ const productsByCategory = computed(() => {
   
   const groups = {}
   activeProds.forEach(p => {
-    if (!groups[p.category]) {
-      groups[p.category] = []
+    const cat = (p.category ? p.category.trim() : 'General') || 'General'
+    if (!groups[cat]) {
+      groups[cat] = []
     }
-    groups[p.category].push(p)
+    groups[cat].push(p)
   })
   
   return Object.keys(groups).sort().map(cat => ({
