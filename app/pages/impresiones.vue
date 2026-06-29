@@ -863,7 +863,14 @@ function formatFinalPrice(price) {
 // Window print trigger
 function triggerPrint() {
   if (printQueue.value.length === 0) return
-  window.print()
+  try {
+    localStorage.setItem('control_center_print_queue', JSON.stringify(printQueue.value))
+    localStorage.setItem('control_center_print_layout', JSON.stringify(layoutSettings.value))
+    window.open('/imprimir-etiquetas', '_blank')
+  } catch (err) {
+    console.error('Error saving print parameters', err)
+    window.print() // Fallback
+  }
 }
 
 // Apply initial preset settings on mount
@@ -1665,7 +1672,8 @@ applySizePreset()
     visibility: hidden;
   }
   
-  .no-print {
+  /* Completely hide layout elements like header and sidebar, and explicit no-print elements */
+  header, aside, .mobile-header, .sidebar, .collapse-btn, .sidebar-footer, .no-print, .no-print * {
     display: none !important;
   }
   
@@ -1674,16 +1682,31 @@ applySizePreset()
     visibility: visible;
   }
   
+  /* Strip all borders, shadows, backgrounds, paddings, and margins from all print-area ancestors */
+  html, body, .app-layout, .main-content, .content-wrapper, .preview-section-wrapper, .preview-container-box, .preview-sheet, .preview-page-canvas {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+    position: static !important;
+  }
+
   #print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background-color: white !important;
     box-shadow: none !important;
     border: none !important;
+    display: grid !important;
   }
   
   .labels-print-container {
