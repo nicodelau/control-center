@@ -91,25 +91,59 @@
         <h3 class="panel-title">Libro Diario de Cuenta Corriente</h3>
         <span class="panel-sub">Historial cronológico de movimientos financieros</span>
 
+        <div class="search-box mb-4 mt-2">
+          <SearchIcon :size="16" class="search-icon" />
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="Filtrar movimientos..." 
+            class="search-input"
+          />
+        </div>
+
         <div class="ledger-table-wrapper">
           <table class="premium-table ledger-table">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Concepto / Detalle</th>
-                <th class="text-center">Tipo</th>
-                <th class="text-right text-danger">Debe (Venta)</th>
-                <th class="text-right text-success">Haber (Cobro)</th>
-                <th class="text-right">Saldo Resultante</th>
+                <th @click="sortBy('date')" class="sortable-header">
+                  Fecha
+                  <span v-if="sortKey === 'date'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('description')" class="sortable-header">
+                  Concepto / Detalle
+                  <span v-if="sortKey === 'description'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('type')" class="sortable-header text-center">
+                  Tipo
+                  <span v-if="sortKey === 'type'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('amount')" class="sortable-header text-right text-danger">
+                  Debe (Venta)
+                  <span v-if="sortKey === 'amount'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('amount')" class="sortable-header text-right text-success">
+                  Haber (Cobro)
+                  <span v-if="sortKey === 'amount'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('balanceAfter')" class="sortable-header text-right">
+                  Saldo Resultante
+                  <span v-if="sortKey === 'balanceAfter'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-if="!client.transactions || client.transactions.length === 0">
+              <tr v-if="!client.transactions || filteredTransactions.length === 0">
                 <td colspan="6" class="text-center text-muted py-8">
-                  No se registran movimientos en la cuenta corriente de este cliente.
+                  No se encontraron movimientos.
                 </td>
               </tr>
-              <tr v-for="tx in client.transactions" :key="tx.id">
+              <tr v-for="tx in filteredTransactions" :key="tx.id">
                 <td class="date-cell">{{ formatDate(tx.date) }}</td>
                 <td>
                   <span class="desc font-bold">{{ tx.description }}</span>
@@ -150,8 +184,9 @@
     </div>
 
     <!-- Register Payment Modal -->
-    <div class="modal-overlay" v-if="isPaymentModalOpen" @click.self="closePaymentModal">
-      <div class="modal-box premium-card animate-fade-in">
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="isPaymentModalOpen" @click.self="closePaymentModal">
+        <div class="modal-box premium-card animate-fade-in">
         <div class="modal-header">
           <h2 class="modal-title">Registrar Cobro de Cuenta Corriente</h2>
           <button class="modal-close-btn" @click="closePaymentModal">
@@ -226,15 +261,17 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useFetch } from '#app'
 import { 
   DollarSign as DollarIcon, 
-  X as XIcon 
+  X as XIcon,
+  Search as SearchIcon
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -242,6 +279,94 @@ const clientId = route.params.id
 
 // Fetch client details
 const { data: client, pending, refresh } = await useFetch(`/api/clientes/${clientId}`)
+
+// State
+const searchQuery = ref('')
+const sortKey = ref('date')
+const sortAsc = ref(false)
+
+function sortBy(key) {
+  if (sortKey.value === key) {
+    sortAsc.value = !sortAsc.value
+  } else {
+    sortKey.value = key
+    sortAsc.value = true
+  }
+}
+
+function levenshteinDistance(a, b) {
+  const matrix = []
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i]
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1]
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        )
+      }
+    }
+  }
+  return matrix[b.length][a.length]
+}
+
+function fuzzyMatch(text, query, threshold = 0.85) {
+  if (!query) return true
+  if (!text) return false
+  
+  const textClean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  const queryClean = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  
+  if (textClean.includes(queryClean)) return true
+  
+  const queryWords = queryClean.split(/\s+/).filter(Boolean)
+  const textWords = textClean.split(/\s+/).filter(Boolean)
+  
+  return queryWords.every(qWord => {
+    return textWords.some(tWord => {
+      if (tWord.includes(qWord) || qWord.includes(tWord)) return true
+      
+      const dist = levenshteinDistance(qWord, tWord)
+      const maxLen = Math.max(qWord.length, tWord.length)
+      if (maxLen === 0) return true
+      return (1 - dist / maxLen) >= threshold
+    })
+  })
+}
+
+const filteredTransactions = computed(() => {
+  if (!client.value || !client.value.transactions) return []
+  const filtered = client.value.transactions.filter(tx => {
+    const query = searchQuery.value.trim()
+    const matchesSearch = !query ||
+      fuzzyMatch(formatDate(tx.date), query) ||
+      fuzzyMatch(tx.description, query) ||
+      fuzzyMatch(getTxTypeLabel(tx.type), query) ||
+      fuzzyMatch(tx.amount?.toString(), query) ||
+      fuzzyMatch(tx.balanceAfter?.toString(), query) ||
+      fuzzyMatch(tx.currency, query)
+      
+    return matchesSearch
+  })
+
+  return filtered.sort((a, b) => {
+    let valA = a[sortKey.value]
+    let valB = b[sortKey.value]
+
+    if (valA && typeof valA === 'object' && valA.toString) valA = parseFloat(valA.toString()) || 0
+    if (valB && typeof valB === 'object' && valB.toString) valB = parseFloat(valB.toString()) || 0
+
+    if (typeof valA === 'string') valA = valA.toLowerCase()
+    if (typeof valB === 'string') valB = valB.toLowerCase()
+
+    if (valA < valB) return sortAsc.value ? -1 : 1
+    if (valA > valB) return sortAsc.value ? 1 : -1
+    return 0
+  })
+})
 
 // Modal State
 const isPaymentModalOpen = ref(false)
@@ -652,5 +777,56 @@ async function submitPayment() {
   margin-top: 12px;
   border-top: 1px solid var(--border-color);
   padding-top: 16px;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border-radius: 10px;
+  border: 1px solid var(--soft-fawn);
+  background-color: var(--white);
+  color: var(--text-primary);
+  font-family: var(--font-family-sans);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--amber-honey);
+  box-shadow: 0 0 0 3px rgba(232, 174, 31, 0.15);
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+.sortable-header:hover {
+  background-color: rgba(233, 215, 155, 0.3) !important;
+}
+.sort-placeholder {
+  opacity: 0.25;
+  margin-left: 4px;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
+.mt-2 {
+  margin-top: 8px;
 }
 </style>

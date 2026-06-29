@@ -271,42 +271,44 @@
     </div>
 
     <!-- Billing Success Modal -->
-    <div class="modal-overlay" v-if="isSuccessModalOpen" @click.self="closeSuccessModal">
-      <div class="modal-box success-modal premium-card animate-fade-in text-center">
-        <div class="success-icon-container">
-          <CheckIcon :size="48" class="success-icon" />
-        </div>
-        <h2 class="modal-title">¡Venta Registrada con Éxito!</h2>
-        <p class="modal-desc">
-          La transacción se ha asentado en el sistema correctamente.
-        </p>
-
-        <div class="receipt-summary glass font-mono">
-          <div class="receipt-row">
-            <span>Comprobante:</span>
-            <strong>#{{ lastCreatedSale?.invoiceNumber }}</strong>
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="isSuccessModalOpen" @click.self="closeSuccessModal">
+        <div class="modal-box success-modal premium-card animate-fade-in text-center">
+          <div class="success-icon-container">
+            <CheckIcon :size="48" class="success-icon" />
           </div>
-          <div class="receipt-row">
-            <span>Cliente:</span>
-            <span>{{ activeClient?.name || 'Consumidor Final' }}</span>
+          <h2 class="modal-title">¡Venta Registrada con Éxito!</h2>
+          <p class="modal-desc">
+            La transacción se ha asentado en el sistema correctamente.
+          </p>
+  
+          <div class="receipt-summary glass font-mono">
+            <div class="receipt-row">
+              <span>Comprobante:</span>
+              <strong>#{{ lastCreatedSale?.invoiceNumber }}</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Cliente:</span>
+              <span>{{ activeClient?.name || 'Consumidor Final' }}</span>
+            </div>
+            <div class="receipt-row">
+              <span>Método:</span>
+              <span>{{ paymentMethod === 'CUENTA_CORRIENTE' ? 'A Cuenta Corriente' : paymentMethod }}</span>
+            </div>
+            <div class="receipt-row total">
+              <span>Total Cobrado:</span>
+              <strong class="text-success">{{ currency === 'PESOS' ? '$' : 'u$s' }}{{ formatNumber(lastCreatedSale?.totalAmount) }} {{ currency }}</strong>
+            </div>
           </div>
-          <div class="receipt-row">
-            <span>Método:</span>
-            <span>{{ paymentMethod === 'CUENTA_CORRIENTE' ? 'A Cuenta Corriente' : paymentMethod }}</span>
+  
+          <div class="modal-actions">
+            <button class="btn btn-primary" @click="closeSuccessModal">
+              Cerrar e Iniciar Nueva Venta
+            </button>
           </div>
-          <div class="receipt-row total">
-            <span>Total Cobrado:</span>
-            <strong class="text-success">{{ currency === 'PESOS' ? '$' : 'u$s' }}{{ formatNumber(lastCreatedSale?.totalAmount) }} {{ currency }}</strong>
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-primary" @click="closeSuccessModal">
-            Cerrar e Iniciar Nueva Venta
-          </button>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

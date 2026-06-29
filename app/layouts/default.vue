@@ -88,7 +88,8 @@ import {
   ChevronRight as ChevronRightIcon,
   Menu as MenuIcon,
   X as XIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Printer as PrinterIcon
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -111,7 +112,8 @@ const navItems = [
   { name: 'Lista de Precios', path: '/lista-precios', icon: TagsIcon },
   { name: 'Nueva Venta (POS)', path: '/ventas', icon: ShoppingCartIcon },
   { name: 'Compras (Stock)', path: '/compras', icon: TruckIcon },
-  { name: 'Gastos', path: '/gastos', icon: CreditCardIcon }
+  { name: 'Gastos', path: '/gastos', icon: CreditCardIcon },
+  { name: 'Impresiones', path: '/impresiones', icon: PrinterIcon }
 ]
 
 function toggleCollapse() {

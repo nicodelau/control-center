@@ -34,12 +34,36 @@
       <table class="premium-table">
         <thead>
           <tr>
-            <th>Nombre / Cazón Social</th>
-            <th>Contacto</th>
-            <th>CUIT / CUIL</th>
-            <th class="text-right text-success">Saldo Pesos ($)</th>
-            <th class="text-right text-honey">Saldo Dólares (u$s)</th>
-            <th class="text-center">Estado CC</th>
+            <th @click="sortBy('name')" class="sortable-header">
+              Nombre / Razón Social
+              <span v-if="sortKey === 'name'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('email')" class="sortable-header">
+              Contacto
+              <span v-if="sortKey === 'email'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('taxId')" class="sortable-header">
+              CUIT / CUIL
+              <span v-if="sortKey === 'taxId'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('balancePesos')" class="sortable-header text-right text-success">
+              Saldo Pesos ($)
+              <span v-if="sortKey === 'balancePesos'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('balanceUsd')" class="sortable-header text-right text-honey">
+              Saldo Dólares (u$s)
+              <span v-if="sortKey === 'balanceUsd'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('active')" class="sortable-header text-center">
+              Estado CC
+              <span v-if="sortKey === 'active'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -98,8 +122,9 @@
     </div>
 
     <!-- Client Modal Form (Create / Edit) -->
-    <div class="modal-overlay" v-if="isModalOpen" @click.self="closeModal">
-      <div class="modal-box premium-card animate-fade-in">
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="isModalOpen" @click.self="closeModal">
+        <div class="modal-box premium-card animate-fade-in">
         <div class="modal-header">
           <h2 class="modal-title">
             {{ isEditing ? 'Editar Ficha de Cliente' : 'Cargar Nuevo Cliente' }}
@@ -188,6 +213,7 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
@@ -222,15 +248,93 @@ const form = ref({
 })
 
 // Filtered clients list
+const sortKey = ref('name')
+const sortAsc = ref(true)
+
+function sortBy(key) {
+  if (sortKey.value === key) {
+    sortAsc.value = !sortAsc.value
+  } else {
+    sortKey.value = key
+    sortAsc.value = true
+  }
+}
+
+function levenshteinDistance(a, b) {
+  const matrix = []
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i]
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1]
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        )
+      }
+    }
+  }
+  return matrix[b.length][a.length]
+}
+
+function fuzzyMatch(text, query, threshold = 0.85) {
+  if (!query) return true
+  if (!text) return false
+  
+  const textClean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  const queryClean = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  
+  if (textClean.includes(queryClean)) return true
+  
+  const queryWords = queryClean.split(/\s+/).filter(Boolean)
+  const textWords = textClean.split(/\s+/).filter(Boolean)
+  
+  return queryWords.every(qWord => {
+    return textWords.some(tWord => {
+      if (tWord.includes(qWord) || qWord.includes(tWord)) return true
+      
+      const dist = levenshteinDistance(qWord, tWord)
+      const maxLen = Math.max(qWord.length, tWord.length)
+      if (maxLen === 0) return true
+      return (1 - dist / maxLen) >= threshold
+    })
+  })
+}
+
+// Filtered clients list
 const filteredClients = computed(() => {
   if (!clients.value) return []
-  return clients.value.filter(c => {
-    const query = searchQuery.value.toLowerCase().trim()
-    return (
-      c.name.toLowerCase().includes(query) ||
-      (c.email && c.email.toLowerCase().includes(query)) ||
-      (c.taxId && c.taxId.toLowerCase().includes(query))
-    )
+  const filtered = clients.value.filter(c => {
+    const query = searchQuery.value.trim()
+    const matchesSearch = !query ||
+      fuzzyMatch(c.name, query) ||
+      fuzzyMatch(c.email, query) ||
+      fuzzyMatch(c.phone, query) ||
+      fuzzyMatch(c.address, query) ||
+      fuzzyMatch(c.taxId, query) ||
+      fuzzyMatch(c.balancePesos?.toString(), query) ||
+      fuzzyMatch(c.balanceUsd?.toString(), query) ||
+      fuzzyMatch(c.active ? 'activo' : 'inactivo', query)
+      
+    return matchesSearch
+  })
+
+  // Sort
+  return filtered.sort((a, b) => {
+    let valA = a[sortKey.value]
+    let valB = b[sortKey.value]
+
+    if (valA && typeof valA === 'object' && valA.toString) valA = parseFloat(valA.toString()) || 0
+    if (valB && typeof valB === 'object' && valB.toString) valB = parseFloat(valB.toString()) || 0
+
+    if (typeof valA === 'string') valA = valA.toLowerCase()
+    if (typeof valB === 'string') valB = valB.toLowerCase()
+
+    if (valA < valB) return sortAsc.value ? -1 : 1
+    if (valA > valB) return sortAsc.value ? 1 : -1
+    return 0
   })
 })
 
@@ -600,5 +704,18 @@ async function deleteClient(id) {
   margin-top: 12px;
   border-top: 1px solid var(--border-color);
   padding-top: 16px;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+.sortable-header:hover {
+  background-color: rgba(233, 215, 155, 0.3) !important;
+}
+.sort-placeholder {
+  opacity: 0.25;
+  margin-left: 4px;
 }
 </style>

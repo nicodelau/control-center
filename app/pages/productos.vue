@@ -45,14 +45,46 @@
       <table class="premium-table">
         <thead>
           <tr>
-            <th>Código / SKU</th>
-            <th>Producto / Detalle</th>
-            <th>Categoría</th>
-            <th class="text-right">Costo</th>
-            <th class="text-right">Precio Lista</th>
-            <th class="text-right">Precio Efec</th>
-            <th class="text-center">Stock</th>
-            <th class="text-center">Estado</th>
+            <th @click="sortBy('code')" class="sortable-header">
+              Código / SKU
+              <span v-if="sortKey === 'code'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('name')" class="sortable-header">
+              Producto / Detalle
+              <span v-if="sortKey === 'name'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('category')" class="sortable-header">
+              Categoría
+              <span v-if="sortKey === 'category'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('cost')" class="sortable-header text-right">
+              Costo
+              <span v-if="sortKey === 'cost'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('price')" class="sortable-header text-right">
+              Precio Lista
+              <span v-if="sortKey === 'price'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('cashPrice')" class="sortable-header text-right">
+              Precio Efec
+              <span v-if="sortKey === 'cashPrice'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('stock')" class="sortable-header text-center">
+              Stock
+              <span v-if="sortKey === 'stock'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
+            <th @click="sortBy('active')" class="sortable-header text-center">
+              Estado
+              <span v-if="sortKey === 'active'">{{ sortAsc ? '▲' : '▼' }}</span>
+              <span v-else class="sort-placeholder">↕</span>
+            </th>
             <th class="text-center">Acciones</th>
           </tr>
         </thead>
@@ -108,8 +140,9 @@
     </div>
 
     <!-- Product Modal Form (Create / Edit) -->
-    <div class="modal-overlay" v-if="isModalOpen" @click.self="closeModal">
-      <div class="modal-box premium-card animate-fade-in">
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="isModalOpen" @click.self="closeModal">
+        <div class="modal-box premium-card animate-fade-in">
         <div class="modal-header">
           <h2 class="modal-title">
             {{ isEditing ? 'Modificar Producto' : 'Nuevo Producto' }}
@@ -263,6 +296,7 @@
         </form>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
@@ -286,6 +320,61 @@ const selectedCategory = ref('ALL')
 const isModalOpen = ref(false)
 const isEditing = ref(false)
 const submitting = ref(false)
+
+const sortKey = ref('name')
+const sortAsc = ref(true)
+
+function sortBy(key) {
+  if (sortKey.value === key) {
+    sortAsc.value = !sortAsc.value
+  } else {
+    sortKey.value = key
+    sortAsc.value = true
+  }
+}
+
+function levenshteinDistance(a, b) {
+  const matrix = []
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i]
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1]
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        )
+      }
+    }
+  }
+  return matrix[b.length][a.length]
+}
+
+function fuzzyMatch(text, query, threshold = 0.85) {
+  if (!query) return true
+  if (!text) return false
+  
+  const textClean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  const queryClean = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  
+  if (textClean.includes(queryClean)) return true
+  
+  const queryWords = queryClean.split(/\s+/).filter(Boolean)
+  const textWords = textClean.split(/\s+/).filter(Boolean)
+  
+  return queryWords.every(qWord => {
+    return textWords.some(tWord => {
+      if (tWord.includes(qWord) || qWord.includes(tWord)) return true
+      
+      const dist = levenshteinDistance(qWord, tWord)
+      const maxLen = Math.max(qWord.length, tWord.length)
+      if (maxLen === 0) return true
+      return (1 - dist / maxLen) >= threshold
+    })
+  })
+}
 
 const form = ref({
   id: '',
@@ -313,13 +402,19 @@ const categories = computed(() => {
 const filteredProducts = computed(() => {
   if (!products.value) return []
   
-  return products.value.filter(p => {
+  const filtered = products.value.filter(p => {
     // 1. Search filter
     const query = searchQuery.value.toLowerCase().trim()
-    const matchesSearch = 
-      p.name.toLowerCase().includes(query) ||
-      p.code.toLowerCase().includes(query) ||
-      (p.brand && p.brand.toLowerCase().includes(query))
+    const matchesSearch = !query || 
+      fuzzyMatch(p.name, query) ||
+      fuzzyMatch(p.code, query) ||
+      fuzzyMatch(p.brand, query) ||
+      fuzzyMatch(p.category, query) ||
+      fuzzyMatch(p.cost?.toString(), query) ||
+      fuzzyMatch(p.price?.toString(), query) ||
+      fuzzyMatch(p.cashPrice?.toString(), query) ||
+      fuzzyMatch(p.stock?.toString(), query) ||
+      fuzzyMatch(p.active ? 'activo' : 'inactivo', query)
       
     // 2. Category filter
     const productCategory = (p.category ? p.category.trim() : 'General') || 'General'
@@ -328,6 +423,22 @@ const filteredProducts = computed(() => {
       productCategory === selectedCategory.value
 
     return matchesSearch && matchesCategory
+  })
+
+  // Sort
+  return filtered.sort((a, b) => {
+    let valA = a[sortKey.value]
+    let valB = b[sortKey.value]
+
+    if (valA && typeof valA === 'object' && valA.toString) valA = parseFloat(valA.toString()) || 0
+    if (valB && typeof valB === 'object' && valB.toString) valB = parseFloat(valB.toString()) || 0
+
+    if (typeof valA === 'string') valA = valA.toLowerCase()
+    if (typeof valB === 'string') valB = valB.toLowerCase()
+
+    if (valA < valB) return sortAsc.value ? -1 : 1
+    if (valA > valB) return sortAsc.value ? 1 : -1
+    return 0
   })
 })
 
@@ -790,5 +901,18 @@ async function deleteProduct(id) {
   margin-top: 12px;
   border-top: 1px solid var(--border-color);
   padding-top: 16px;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+.sortable-header:hover {
+  background-color: rgba(233, 215, 155, 0.3) !important;
+}
+.sort-placeholder {
+  opacity: 0.25;
+  margin-left: 4px;
 }
 </style>

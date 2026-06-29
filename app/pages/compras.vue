@@ -194,38 +194,40 @@
     </div>
 
     <!-- Success Modal -->
-    <div class="modal-overlay" v-if="isSuccessModalOpen" @click.self="closeSuccessModal">
-      <div class="modal-box success-modal premium-card animate-fade-in text-center">
-        <div class="success-icon-container">
-          <CheckIcon :size="48" class="success-icon" />
-        </div>
-        <h2 class="modal-title">¡Compra de Stock Registrada!</h2>
-        <p class="modal-desc">
-          El stock e información de costo de los productos se actualizaron de inmediato.
-        </p>
-
-        <div class="receipt-summary glass font-mono">
-          <div class="receipt-row">
-            <span>Proveedor:</span>
-            <strong>{{ supplierName || 'Proveedor General' }}</strong>
+    <Teleport to="body">
+      <div class="modal-overlay" v-if="isSuccessModalOpen" @click.self="closeSuccessModal">
+        <div class="modal-box success-modal premium-card animate-fade-in text-center">
+          <div class="success-icon-container">
+            <CheckIcon :size="48" class="success-icon" />
           </div>
-          <div class="receipt-row">
-            <span>Productos Cargados:</span>
-            <span>{{ itemsListCount }} ítems</span>
+          <h2 class="modal-title">¡Compra de Stock Registrada!</h2>
+          <p class="modal-desc">
+            El stock e información de costo de los productos se actualizaron de inmediato.
+          </p>
+  
+          <div class="receipt-summary glass font-mono">
+            <div class="receipt-row">
+              <span>Proveedor:</span>
+              <strong>{{ supplierName || 'Proveedor General' }}</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Productos Cargados:</span>
+              <span>{{ itemsListCount }} ítems</span>
+            </div>
+            <div class="receipt-row total">
+              <span>Total Pagado:</span>
+              <strong class="text-danger">{{ currency === 'PESOS' ? '$' : 'u$s' }}{{ formatNumber(lastPurchaseTotal) }} {{ currency }}</strong>
+            </div>
           </div>
-          <div class="receipt-row total">
-            <span>Total Pagado:</span>
-            <strong class="text-danger">{{ currency === 'PESOS' ? '$' : 'u$s' }}{{ formatNumber(lastPurchaseTotal) }} {{ currency }}</strong>
+  
+          <div class="modal-actions">
+            <button class="btn btn-primary" @click="closeSuccessModal">
+              Cerrar y Cargar Otra Compra
+            </button>
           </div>
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-primary" @click="closeSuccessModal">
-            Cerrar y Cargar Otra Compra
-          </button>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

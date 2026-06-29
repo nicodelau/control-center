@@ -148,25 +148,55 @@
         <h2 class="panel-title">Historial de Egresos</h2>
         <span class="panel-sub">Listado cronológico de egresos registrados</span>
 
+        <div class="search-box mb-4 mt-2">
+          <SearchIcon :size="16" class="search-icon" />
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="Filtrar egresos..." 
+            class="search-input"
+          />
+        </div>
+
         <div class="log-table-wrapper">
           <table class="premium-table">
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Concepto / Detalle</th>
-                <th>Categoría</th>
-                <th>Método</th>
-                <th class="text-right">Importe</th>
+                <th @click="sortBy('date')" class="sortable-header">
+                  Fecha
+                  <span v-if="sortKey === 'date'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('description')" class="sortable-header">
+                  Concepto / Detalle
+                  <span v-if="sortKey === 'description'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('category')" class="sortable-header">
+                  Categoría
+                  <span v-if="sortKey === 'category'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('paymentMethod')" class="sortable-header">
+                  Método
+                  <span v-if="sortKey === 'paymentMethod'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
+                <th @click="sortBy('amount')" class="sortable-header text-right">
+                  Importe
+                  <span v-if="sortKey === 'amount'">{{ sortAsc ? '▲' : '▼' }}</span>
+                  <span v-else class="sort-placeholder">↕</span>
+                </th>
                 <th class="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-if="!expenses || expenses.length === 0">
+              <tr v-if="!expenses || filteredExpenses.length === 0">
                 <td colspan="6" class="text-center text-muted py-8">
-                  No hay gastos registrados en el sistema.
+                  No se encontraron egresos.
                 </td>
               </tr>
-              <tr v-for="exp in expenses" :key="exp.id">
+              <tr v-for="exp in filteredExpenses" :key="exp.id">
                 <td class="date-cell">{{ formatDate(exp.date) }}</td>
                 <td>
                   <div class="exp-concept">
@@ -199,9 +229,96 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useFetch } from '#app'
-import { Plus as PlusIcon, Trash as TrashIcon } from 'lucide-vue-next'
+import { Plus as PlusIcon, Trash as TrashIcon, Search as SearchIcon } from 'lucide-vue-next'
 
 const { data: expenses, refresh } = await useFetch('/api/gastos')
+
+const searchQuery = ref('')
+const sortKey = ref('date')
+const sortAsc = ref(false)
+
+function sortBy(key) {
+  if (sortKey.value === key) {
+    sortAsc.value = !sortAsc.value
+  } else {
+    sortKey.value = key
+    sortAsc.value = true
+  }
+}
+
+function levenshteinDistance(a, b) {
+  const matrix = []
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i]
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1]
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+        )
+      }
+    }
+  }
+  return matrix[b.length][a.length]
+}
+
+function fuzzyMatch(text, query, threshold = 0.85) {
+  if (!query) return true
+  if (!text) return false
+  
+  const textClean = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  const queryClean = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  
+  if (textClean.includes(queryClean)) return true
+  
+  const queryWords = queryClean.split(/\s+/).filter(Boolean)
+  const textWords = textClean.split(/\s+/).filter(Boolean)
+  
+  return queryWords.every(qWord => {
+    return textWords.some(tWord => {
+      if (tWord.includes(qWord) || qWord.includes(tWord)) return true
+      
+      const dist = levenshteinDistance(qWord, tWord)
+      const maxLen = Math.max(qWord.length, tWord.length)
+      if (maxLen === 0) return true
+      return (1 - dist / maxLen) >= threshold
+    })
+  })
+}
+
+const filteredExpenses = computed(() => {
+  if (!expenses.value) return []
+  const filtered = expenses.value.filter(exp => {
+    const query = searchQuery.value.trim()
+    const matchesSearch = !query ||
+      fuzzyMatch(formatDate(exp.date), query) ||
+      fuzzyMatch(exp.description, query) ||
+      fuzzyMatch(exp.category, query) ||
+      fuzzyMatch(exp.paymentMethod, query) ||
+      fuzzyMatch(exp.amount?.toString(), query) ||
+      fuzzyMatch(exp.currency, query)
+      
+    return matchesSearch
+  })
+
+  return filtered.sort((a, b) => {
+    let valA = a[sortKey.value]
+    let valB = b[sortKey.value]
+
+    if (valA && typeof valA === 'object' && valA.toString) valA = parseFloat(valA.toString()) || 0
+    if (valB && typeof valB === 'object' && valB.toString) valB = parseFloat(valB.toString()) || 0
+
+    if (typeof valA === 'string') valA = valA.toLowerCase()
+    if (typeof valB === 'string') valB = valB.toLowerCase()
+
+    if (valA < valB) return sortAsc.value ? -1 : 1
+    if (valA > valB) return sortAsc.value ? 1 : -1
+    return 0
+  })
+})
 
 // Form state
 const submitting = ref(false)
@@ -524,6 +641,66 @@ async function deleteExpense(id) {
   gap: 8px;
   border-top: 1px dashed var(--border-color);
   padding-top: 14px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border-radius: 10px;
+  border: 1px solid var(--soft-fawn);
+  background-color: var(--white);
+  color: var(--text-primary);
+  font-family: var(--font-family-sans);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--amber-honey);
+  box-shadow: 0 0 0 3px rgba(232, 174, 31, 0.15);
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+.sortable-header:hover {
+  background-color: rgba(233, 215, 155, 0.3) !important;
+}
+.sort-placeholder {
+  opacity: 0.25;
+  margin-left: 4px;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
+.mt-2 {
+  margin-top: 8px;
 }
 
 .legend-row {
