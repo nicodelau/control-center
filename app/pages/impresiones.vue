@@ -336,7 +336,7 @@
                 <input 
                   type="range" 
                   v-model.number="layoutSettings.fontScale" 
-                  min="0.5" 
+                  min="0.3" 
                   max="1.8" 
                   step="0.05"
                   @input="onTuningChange"
@@ -452,7 +452,8 @@
                     class="label-item" 
                     :class="[
                       'border-' + layoutSettings.borderStyle,
-                      { 'no-logo': !layoutSettings.showLogo }
+                      { 'no-logo': !layoutSettings.showLogo },
+                      { 'layout-watermark': layoutSettings.columns === 2 }
                     ]"
                   >
                     <!-- Left Column: Logo + Title -->
@@ -1539,9 +1540,9 @@ applySizePreset()
 .label-item {
   display: flex;
   background-color: #FEFDFE;
-  padding: 10px;
+  padding: calc(10px * var(--font-scale, 1));
   box-sizing: border-box;
-  gap: 12px;
+  gap: calc(12px * var(--font-scale, 1));
   align-items: stretch;
   overflow: hidden;
   height: var(--label-height, 60mm);
@@ -1554,15 +1555,15 @@ applySizePreset()
 
 /* Border choices */
 .border-dashed {
-  border: 2px dashed #b89b53;
+  border: calc(2px * var(--font-scale, 1)) dashed #b89b53;
 }
 
 .border-solid {
-  border: 2px solid #1E1C18;
+  border: calc(2px * var(--font-scale, 1)) solid #1E1C18;
 }
 
 .border-none {
-  border: 2px solid transparent;
+  border: calc(2px * var(--font-scale, 1)) solid transparent;
 }
 
 .label-col-left {
@@ -1572,21 +1573,21 @@ applySizePreset()
   justify-content: center;
   align-items: center;
   text-align: center;
-  border-right: 2.5px dashed rgba(208, 180, 111, 0.45);
-  padding-right: 12px;
+  border-right: calc(2.5px * var(--font-scale, 1)) dashed rgba(208, 180, 111, 0.45);
+  padding-right: calc(12px * var(--font-scale, 1));
   overflow: hidden;
 }
 
 .border-solid .label-col-left {
-  border-right: 2px dashed #1E1C18;
+  border-right: calc(2px * var(--font-scale, 1)) dashed #1E1C18;
 }
 
 .border-none .label-col-left {
-  border-right: 1.5px solid var(--border-color);
+  border-right: calc(1.5px * var(--font-scale, 1)) solid var(--border-color);
 }
 
 .logo-wrapper {
-  margin-bottom: 6px;
+  margin-bottom: calc(6px * var(--font-scale, 1));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1594,7 +1595,7 @@ applySizePreset()
 }
 
 .label-logo {
-  max-height: calc(44px * var(--font-scale, 1));
+  max-height: min(calc(44px * var(--font-scale, 1)), calc(0.35 * var(--label-height, 60mm) * var(--font-scale, 1)));
   max-width: 100%;
   object-fit: contain;
 }
@@ -1638,7 +1639,7 @@ applySizePreset()
   font-weight: 850;
   color: #1e1c18;
   line-height: 1.0;
-  margin-bottom: 6px;
+  margin-bottom: calc(6px * var(--font-scale, 1));
   white-space: nowrap;
 }
 
@@ -1648,7 +1649,7 @@ applySizePreset()
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: calc(3px * var(--font-scale, 1));
 }
 
 .label-price-details li {
@@ -1663,6 +1664,99 @@ applySizePreset()
 .label-price-details li strong {
   color: #1e1c18;
   font-weight: 700;
+}
+
+/* Watermark layout rules (applied when columns === 2) */
+.label-item.layout-watermark {
+  position: relative !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  align-items: stretch !important;
+}
+
+.label-item.layout-watermark .logo-wrapper {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 90% !important;
+  height: 90% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0.12 !important; /* soft watermark but clearly visible */
+  z-index: 1 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.label-item.layout-watermark .label-logo {
+  max-height: 80% !important;
+  max-width: 80% !important;
+  object-fit: contain !important;
+  filter: grayscale(100%) !important;
+}
+
+.label-item.layout-watermark .label-col-left {
+  position: static !important; /* let logo absolute centering refer to label-item */
+  overflow: visible !important; /* avoid clipping the logo */
+  flex: none !important;
+  width: 100% !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  padding-right: 0 !important;
+  padding-bottom: calc(4px * var(--font-scale, 1)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.label-item.layout-watermark .label-product-title {
+  position: relative !important;
+  z-index: 2 !important;
+  font-size: calc(1.0rem * var(--font-scale, 1)) !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.label-item.layout-watermark .label-col-right {
+  position: relative !important;
+  z-index: 2 !important;
+  flex: 1 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding-left: 0 !important;
+}
+
+.label-item.layout-watermark .label-price-header {
+  font-size: calc(0.6rem * var(--font-scale, 1)) !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.label-item.layout-watermark .label-price-value {
+  font-size: calc(1.9rem * var(--font-scale, 1)) !important;
+  margin-bottom: calc(2px * var(--font-scale, 1)) !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.label-item.layout-watermark .label-price-details {
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+.label-item.layout-watermark .label-price-details li {
+  font-size: calc(0.65rem * var(--font-scale, 1)) !important;
+  text-align: center !important;
 }
 
 /* NATIVE PRINT STYLES */
