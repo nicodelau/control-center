@@ -593,6 +593,7 @@ function closeSuccessModal() {
 .search-controls {
   position: relative;
   width: 100%;
+  z-index: 50;
 }
 
 .search-box {
@@ -636,7 +637,7 @@ function closeSuccessModal() {
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--soft-fawn);
-  z-index: 10;
+  z-index: 100;
   margin-top: 6px;
   overflow: hidden;
   max-height: 250px;

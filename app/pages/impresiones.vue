@@ -1036,6 +1036,7 @@ applySizePreset()
 /* Search suggestions overlay */
 .search-section {
   position: relative;
+  z-index: 50;
 }
 
 .search-box {
